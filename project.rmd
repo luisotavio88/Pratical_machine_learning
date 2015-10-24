@@ -1,0 +1,99 @@
+---
+title: "ML project"
+author: "Luis Otavio"
+date: "Saturday, October 24, 2015"
+output: html_document
+---
+
+#Coursera Machine Learning Project
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Loading the packages needed:
+
+```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, warning=FALSE} 
+library(caret)
+library(randomForest)
+library(doParallel)
+library(foreach)
+library(e1071)
+```
+
+##Read the data and transform #DIV/0! in NA cases.
+
+```{r, warning=FALSE}
+pml.training <- read.csv("pml-training.csv", na.strings=c("#DIV/0!") )
+pml.testing <- read.csv("pml-testing.csv", na.strings=c("#DIV/0!") )
+```
+
+##Cleaning data
+Transforming some columns in numeric and excluding features without values.
+
+```{r, warning=FALSE}
+for(i in c(8:ncol(pml.training)-1)) {pml.training[,i] = as.numeric(as.character(pml.training[,i]))}
+for(i in c(8:ncol(pml.testing)-1)) {pml.testing[,i] = as.numeric(as.character(pml.testing[,i]))}
+
+feature_set <- colnames(pml.training[colSums(is.na(pml.training)) == 0])[-(1:7)]
+model_data <- pml.training[feature_set]
+feature_set <- colnames(pml.testing[colSums(is.na(pml.testing)) == 0])[-(1:7)]
+model_data_TEST <- pml.testing[feature_set]
+```
+
+##Data Validation
+
+Split the training dataset into train and test datasets.The data was partioned by the "classe" variable to ensure
+the training set and test set contain examples of each class. 60% of the training data was allocated to the 
+training set and the remainder for the validation set.
+
+```{r, warning=FALSE}
+rows <- createDataPartition(y=model_data$classe, p=0.6, list=FALSE )
+train<- model_data[rows,]
+test <- model_data[-rows,]
+```
+## Random forest
+Seven random forests with 150 trees each were built. The parallel processing were used to make it faster.
+
+```{r, warning=FALSE}
+registerDoParallel()
+x <- train[-ncol(train)]
+y <- train$classe
+
+rf <- foreach(ntree=rep(150, 6), .combine=randomForest::combine, .packages='randomForest') %dopar% {
+        randomForest(x, y, ntree=ntree) 
+}
+```
+
+
+##Provide error reports for both training and test data
+```{r, warning=FALSE}
+
+predictions1 <- predict(rf, newdata=train)
+confusionMatrix(predictions1,train$classe)
+
+predictions2 <- predict(rf, newdata=test)
+confusionMatrix(predictions2,test$classe)
+```
+
+
+#Conclusions
+
+So, as can be seen from the confusion matrix, this model is very accurate.
+
+
+##Coursera provided code:
+
+```{r, warning=FALSE}
+answers <- predict(rf, newdata=model_data_TEST)
+
+pml_write_files = function(x){
+        n = length(x)
+        for(i in 1:n){
+                filename = paste0("problem_id_",i,".txt")
+                write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+        }
+}
+pml_write_files(answers)
+
+```
+
+
