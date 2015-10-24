@@ -11,7 +11,7 @@ Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible t
 
 Loading the packages needed:
 
-```{r echo=FALSE, cache=FALSE, results=FALSE, warning=FALSE, comment=FALSE, warning=FALSE} 
+```{r echo=FALSE, cache=FALSE,warning=FALSE} 
 library(caret)
 library(randomForest)
 library(doParallel)
